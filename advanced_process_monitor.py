@@ -105,7 +105,7 @@ def main(stdscr):
         stdscr.addstr(0, 0, "PID    Name                 User     Impact   CPU%   Mem%    I/O (B/s)  Threads  Nice  Status")
 
         # Determine the number of processes to display based on terminal height
-        max_processes_to_display = min(20, height - 5)  # Adjust based on the available height
+        max_processes_to_display = min(50, height - 5)  # Adjust based on the available height
         for i, proc in enumerate(impacts[:max_processes_to_display], 1):
             try:
                 # Ensure we don't exceed the width of the terminal window

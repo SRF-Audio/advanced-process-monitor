@@ -29,6 +29,14 @@ SERVICES = [
     "/Library/LaunchDaemons/com.audinate.dante.DanteVia.DanteViaDaemon.plist"
 ]
 
+# List of process names to search and kill
+PROCESSES = [
+    "Adobe",
+    "OneDrive",
+    "DanteViaAudioHelper"
+    # Add more process names here if needed
+]
+
 # List of optimizations to toggle
 OPTIMIZATIONS = [
     "sudo mdutil -a -i off",
@@ -56,7 +64,6 @@ def check_full_disk_access():
     
     return output == ""
 
-
 def disable_services():
     for service in SERVICES:
         run_command(f"launchctl unload -w {service}")
@@ -64,6 +71,40 @@ def disable_services():
 def enable_services():
     for service in SERVICES:
         run_command(f"launchctl load -w {service}")
+
+def kill_processes(process_names):
+    # List all processes and filter by process names
+    try:
+        result = subprocess.run("ps aux", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        processes = result.stdout.decode('utf-8').splitlines()
+
+        for process_name in process_names:
+            for process in processes:
+                if process_name in process:
+                    try:
+                        pid = int(process.split()[1])  
+                        run_command(f"kill -9 {pid}")
+                        log_action(f"Killed {process_name} process with PID: {pid}")
+                    except (IndexError, ValueError):
+                        log_action(f"Failed to parse PID for {process_name}: {process}", success=False)
+    except subprocess.CalledProcessError as e:
+        log_action(f"Failed to list processes: {e.stderr.decode('utf-8')}", success=False)
+
+def toggle_wifi(enable):
+    if enable:
+        run_command("networksetup -setairportpower en0 on")
+        log_action("WiFi enabled")
+    else:
+        run_command("networksetup -setairportpower en0 off")
+        log_action("WiFi disabled")
+
+def toggle_bluetooth(enable):
+    if enable:
+        run_command("blueutil --power 1")
+        log_action("Bluetooth enabled")
+    else:
+        run_command("blueutil --power 0")
+        log_action("Bluetooth disabled")
 
 def optimize_settings():
     if check_full_disk_access():
@@ -86,16 +127,23 @@ if __name__ == "__main__":
         print("Enabling performance mode...")
         log_action("Enabling performance mode")
         disable_services()
+        kill_processes(PROCESSES)  
+        toggle_wifi(False)
+        toggle_bluetooth(False)
         optimize_settings()
         open(PERFORMANCE_MODE_FLAG, 'a').close()
         log_action("Performance mode enabled")
+        print("Performance mode enabled.")
     else:
         print("Disabling performance mode...")
         log_action("Disabling performance mode")
         enable_services()
+        toggle_wifi(True)
+        toggle_bluetooth(True)
         restore_settings()
         os.remove(PERFORMANCE_MODE_FLAG)
         log_action("Performance mode disabled")
+        print("Performance mode disabled.")
 
     end_time = datetime.now()
     log_action(f"Total execution time: {end_time - start_time}")
