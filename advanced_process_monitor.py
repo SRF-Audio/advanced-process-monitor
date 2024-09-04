@@ -64,8 +64,8 @@ class ProcessMonitor:
 
                 # Calculate a weighted impact score
                 impact_score = (
-                    avg_cpu * 0.4 +
-                    avg_memory * 0.3 +
+                    avg_cpu * 0.5 +
+                    avg_memory * 0.2 +
                     (io_read_rate + io_write_rate) * 0.0000001 * 0.2 +
                     avg_threads * 0.1
                 )
