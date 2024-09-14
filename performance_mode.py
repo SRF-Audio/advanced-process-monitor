@@ -121,6 +121,16 @@ def restore_settings():
     else:
         log_action("Full Disk Access not enabled for Terminal. Skipping disk-related optimizations.", success=False)
 
+def open_applications():
+    # Open Focusrite Control
+    focusrite_control_path = "/Applications/Focusrite Control 2.app"
+    subprocess.run(["open", "-a", focusrite_control_path])
+
+    # Open Logic Pro with a specific project
+    logic_pro_path = "/Applications/Logic Pro X.app"
+    logic_project_path = "/Users/stephenfroeber/Music/Logic/Live Set.logicx"
+    subprocess.run(["open", "-a", logic_pro_path, logic_project_path])
+
 if __name__ == "__main__":
     start_time = datetime.now()
     if not os.path.exists(PERFORMANCE_MODE_FLAG):
@@ -134,6 +144,8 @@ if __name__ == "__main__":
         open(PERFORMANCE_MODE_FLAG, 'a').close()
         log_action("Performance mode enabled")
         print("Performance mode enabled.")
+
+        open_applications()
     else:
         print("Disabling performance mode...")
         log_action("Disabling performance mode")
