@@ -2,6 +2,12 @@ import os
 import subprocess
 from datetime import datetime
 
+# Constants for applications and optional project paths
+APPLICATIONS = [
+    {"app_path": "/Applications/Focusrite Control 2.app", "project_path": None},
+    {"app_path": "/Applications/Logic Pro X.app", "project_path": "~/Music/Logic/Live Set.logicx"}
+]
+
 PERFORMANCE_MODE_FLAG = "/tmp/performance_mode_active"
 LOG_FILE = "/tmp/performance_mode.log"
 
@@ -34,21 +40,46 @@ PROCESSES = [
     "Adobe",
     "OneDrive",
     "DanteViaAudioHelper"
-    # Add more process names here if needed
 ]
 
 # List of optimizations to toggle
 OPTIMIZATIONS = [
     "sudo mdutil -a -i off",
     "sudo tmutil disable",
+    "sudo pmset -a gpuswitch 0",  # Disable automatic graphics switching
+    "sudo pmset -a sleep 0",  # Disable system sleep
+    "defaults write NSGlobalDomain NSAppSleepDisabled -bool YES",  # Disable App Nap
+    "sudo tmutil disablelocal",  # Turn off Time Machine local backups
+    "sudo defaults write /Library/Preferences/com.apple.Bluetooth.plist ControllerPowerState 0",  # Disable Bluetooth discovery
+]
+
+# List of restoration commands to toggle back after session
+RESTORATION_COMMANDS = [
+    "sudo pmset -a gpuswitch 1",  # Re-enable automatic graphics switching
+    "sudo pmset -a sleep 1",  # Re-enable system sleep
+    "defaults write NSGlobalDomain NSAppSleepDisabled -bool NO",  # Re-enable App Nap
+    "sudo tmutil enablelocal",  # Turn on Time Machine local backups
+    "sudo defaults write /Library/Preferences/com.apple.Bluetooth.plist ControllerPowerState 1",  # Re-enable Bluetooth discovery
 ]
 
 def log_action(action, success=True):
+    """
+    Logs actions to a log file with a timestamp.
+    
+    :param action: The action being logged.
+    :param success: Boolean indicating if the action succeeded.
+    """
     status = "Success" if success else "Failed"
     with open(LOG_FILE, "a") as log_file:
         log_file.write(f"{datetime.now()}: {status}: {action}\n")
 
 def run_command(command):
+    """
+    Executes a shell command and logs the result.
+    
+    :param command: Shell command to be executed.
+    :return: Tuple (success, output/error message).
+    """
     try:
         result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         log_action(command)
@@ -58,6 +89,11 @@ def run_command(command):
         return False, e.stderr.decode('utf-8')
 
 def check_full_disk_access():
+    """
+    Checks if the script has full disk access in macOS.
+    
+    :return: True if full disk access is granted, False otherwise.
+    """
     command = "spctl --assess --type execute /System/Applications/Utilities/Terminal.app"
     result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output = result.stderr.decode('utf-8').strip()
@@ -65,15 +101,25 @@ def check_full_disk_access():
     return output == ""
 
 def disable_services():
+    """
+    Disables a predefined list of background services using `launchctl`.
+    """
     for service in SERVICES:
         run_command(f"launchctl unload -w {service}")
 
 def enable_services():
+    """
+    Re-enables the services that were disabled earlier using `launchctl`.
+    """
     for service in SERVICES:
         run_command(f"launchctl load -w {service}")
 
 def kill_processes(process_names):
-    # List all processes and filter by process names
+    """
+    Kills specific processes by name.
+    
+    :param process_names: List of process names to search for and terminate.
+    """
     try:
         result = subprocess.run("ps aux", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         processes = result.stdout.decode('utf-8').splitlines()
@@ -91,22 +137,29 @@ def kill_processes(process_names):
         log_action(f"Failed to list processes: {e.stderr.decode('utf-8')}", success=False)
 
 def toggle_wifi(enable):
-    if enable:
-        run_command("networksetup -setairportpower en0 on")
-        log_action("WiFi enabled")
-    else:
-        run_command("networksetup -setairportpower en0 off")
-        log_action("WiFi disabled")
+    """
+    Toggles WiFi on or off.
+    
+    :param enable: True to enable WiFi, False to disable.
+    """
+    command = "networksetup -setairportpower en0 on" if enable else "networksetup -setairportpower en0 off"
+    run_command(command)
+    log_action("WiFi enabled" if enable else "WiFi disabled")
 
 def toggle_bluetooth(enable):
-    if enable:
-        run_command("blueutil --power 1")
-        log_action("Bluetooth enabled")
-    else:
-        run_command("blueutil --power 0")
-        log_action("Bluetooth disabled")
+    """
+    Toggles Bluetooth on or off.
+    
+    :param enable: True to enable Bluetooth, False to disable.
+    """
+    command = "blueutil --power 1" if enable else "blueutil --power 0"
+    run_command(command)
+    log_action("Bluetooth enabled" if enable else "Bluetooth disabled")
 
 def optimize_settings():
+    """
+    Applies system optimizations for audio performance, such as disabling sleep, graphics switching, etc.
+    """
     if check_full_disk_access():
         for optimization in OPTIMIZATIONS:
             run_command(optimization)
@@ -114,25 +167,42 @@ def optimize_settings():
         log_action("Full Disk Access not enabled for Terminal. Skipping disk-related optimizations.", success=False)
 
 def restore_settings():
+    """
+    Restores system settings that were modified for performance optimizations.
+    """
     if check_full_disk_access():
-        for optimization in OPTIMIZATIONS:
-            restored_command = optimization.replace("off", "on").replace("disable", "enable")
-            run_command(restored_command)
+        for command in RESTORATION_COMMANDS:
+            run_command(command)
     else:
         log_action("Full Disk Access not enabled for Terminal. Skipping disk-related optimizations.", success=False)
 
-def open_applications():
-    # Open Focusrite Control
-    focusrite_control_path = "/Applications/Focusrite Control 2.app"
-    subprocess.run(["open", "-a", focusrite_control_path])
+def expand_path(path):
+    """
+    Expands the tilde (~) to the full home directory path.
+    
+    :param path: The file or project path to expand.
+    :return: Expanded full path.
+    """
+    return os.path.expanduser(path)
 
-    # Open Logic Pro with a specific project
-    logic_pro_path = "/Applications/Logic Pro X.app"
-    logic_project_path = "/Users/stephenfroeber/Music/Logic/Live Set.logicx"
-    subprocess.run(["open", "-a", logic_pro_path, logic_project_path])
+def open_applications(applications):
+    """
+    Opens predefined applications with optional project paths, expanding paths as needed.
+    
+    :param applications: List of dictionaries with app paths and optional project paths.
+    """
+    for app in applications:
+        app_path = app["app_path"]
+        project_path = expand_path(app["project_path"]) if app["project_path"] else None
+        
+        if project_path:
+            subprocess.run(["open", "-a", app_path, project_path])
+        else:
+            subprocess.run(["open", "-a", app_path])
 
 if __name__ == "__main__":
     start_time = datetime.now()
+    
     if not os.path.exists(PERFORMANCE_MODE_FLAG):
         print("Enabling performance mode...")
         log_action("Enabling performance mode")
@@ -145,7 +215,9 @@ if __name__ == "__main__":
         log_action("Performance mode enabled")
         print("Performance mode enabled.")
 
-        open_applications()
+        # Open applications
+        open_applications(APPLICATIONS)
+
     else:
         print("Disabling performance mode...")
         log_action("Disabling performance mode")
