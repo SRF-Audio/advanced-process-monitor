@@ -8,20 +8,19 @@ APPLICATIONS = [
     {"app_path": "/Applications/Logic Pro X.app", "project_path": "~/Music/Logic/Live Set.logicx"}
 ]
 
-PERFORMANCE_MODE_FLAG = "/tmp/performance_mode_active"
-LOG_FILE = "/tmp/performance_mode.log"
+PERFORMANCE_MODE_FLAG = os.path.expanduser("~/Documents/performance_mode_active")
+LOG_FILE = os.path.expanduser("~/Documents/performance_mode.log")
+
 
 # List of services to manage
 SERVICES = [
     "/System/Library/LaunchAgents/com.apple.notificationcenterui.plist",
-    "/System/Library/LaunchAgents/com.apple.spotlight.plist",
     "/System/Library/LaunchDaemons/com.apple.wifip2pd.plist",
     "/System/Library/LaunchDaemons/com.apple.wifiFirmwareLoader.plist",
     "/System/Library/LaunchDaemons/com.apple.wifianalyticsd.plist",
     "/System/Library/LaunchDaemons/com.apple.wifivelocityd.plist",
     "/System/Library/LaunchDaemons/com.apple.bluetoothd.plist",
     "/System/Library/LaunchAgents/com.apple.BluetoothUIService.plist",
-    "/System/Library/LaunchDaemons/com.apple.diagnosticextensions.osx.spotlight.helper.plist",
     "/System/Library/LaunchDaemons/com.apple.icloud.searchpartyd.plist",
     "/System/Library/LaunchDaemons/com.apple.icloud.findmydeviced.plist",
     "/Library/LaunchAgents/com.logitech.logitune.updater.plist",
@@ -44,8 +43,7 @@ PROCESSES = [
 
 # List of optimizations to toggle
 OPTIMIZATIONS = [
-    "sudo mdutil -a -i off",
-    "sudo tmutil disable",
+    "sudo tmutil disable", # Disable Time Machine
     "sudo pmset -a gpuswitch 0",  # Disable automatic graphics switching
     "sudo pmset -a sleep 0",  # Disable system sleep
     "defaults write NSGlobalDomain NSAppSleepDisabled -bool YES",  # Disable App Nap
@@ -55,6 +53,7 @@ OPTIMIZATIONS = [
 
 # List of restoration commands to toggle back after session
 RESTORATION_COMMANDS = [
+    "sudo tmutil enable",  # Re-enable Time Machine
     "sudo pmset -a gpuswitch 1",  # Re-enable automatic graphics switching
     "sudo pmset -a sleep 1",  # Re-enable system sleep
     "defaults write NSGlobalDomain NSAppSleepDisabled -bool NO",  # Re-enable App Nap
